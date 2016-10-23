@@ -12,7 +12,4 @@ Note: all these are statistics regarding your interaction with the person (as yo
 
 Packages required:
 
-matplotlib
-numpy
-lxml
-textblob
+matplotlib, numpy, lxml, textblob
