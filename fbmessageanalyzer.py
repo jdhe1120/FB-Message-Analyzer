@@ -29,13 +29,13 @@ while is_number(maxnumthreads) == False:
 
 # helper function to filter out tags of a certain class
 def filter_class(root, tag, class_):
-    results = [] 
+    results = []
     for div in root.findall(tag):
         if 'class' in div.attrib and div.attrib['class'] == class_:
             results.append(div)
-    if len(results) == 1: 
+    if len(results) == 1:
         return results[0]
-    else: 
+    else:
         return results
 
 # file name here
@@ -56,7 +56,7 @@ sentiments = {}
 
 # translates a FB message time into a dateTime object
 def getTime(string_time):
-    return datetime.fromtimestamp(time.mktime(time.strptime(string_time[:-3], "%A, %B %d, %Y at %I:%M%p ")))
+    return datetime.fromtimestamp(time.mktime(time.strptime(string_time[:-7], "%A, %B %d, %Y at %I:%M%p")))
 
 body = root.find('body')
 
@@ -68,30 +68,38 @@ threads = []
 
 numberthreads = 0
 
-for div in contents:
-    for thread in div:
+for maybeThreadOuter in contents:
+    if 'class' in maybeThreadOuter.attrib and maybeThreadOuter.attrib['class'] == 'thread':
         if numberthreads < maxnumthreads:
-            threads.append(thread)
+            threads.append(maybeThreadOuter)
             numberthreads += 1
+    else:
+        for maybeThreadInner in maybeThreadOuter:
+            if 'class' in maybeThreadInner.attrib and maybeThreadInner.attrib['class'] == 'thread':
+                if numberthreads < maxnumthreads:
+                    threads.append(maybeThreadInner)
+                    numberthreads += 1
 
 index = 0
 
-# the main function which gathers character count and time data 
-def getInfo(test_case):   
+# the main function which gathers character count and time data
+def getInfo(test_case):
     global index
-   
-    names =  test_case.text
-    if is_number(names[0]):
-		names = "Unidentifiable Thread"
+
+    names = test_case.text
     print ("%3s" % str(index)) + '  ' + names
-    
+
     index += 1
 
     for message in test_case:
-
-        if message.tag == 'div': 
-            user = message.find('div').find('span').text
-            message_time = filter_class(message.find('div'), 'span', 'meta').text
+        if message.tag == 'div':
+            try:
+                user = message.find('div').find('span').text
+                message_time = filter_class(message.find('div'), 'span', 'meta').text
+            except AttributeError:
+                print "FB made rare error: message header is missing"
+                user = message.find('span').text
+                message_time = filter_class(message, 'span', 'meta').text
 
         if message.tag == 'p':
             if type(message.text) is str:
@@ -99,8 +107,9 @@ def getInfo(test_case):
                     sentiments[user].append(TextBlob(message.text).sentiment.polarity)
                 else:
                     sentiments[user] = [TextBlob(message.text).sentiment.polarity]
+
                 if user in time_of_day:
-                    time_of_day[user].append(getTime(message_time).hour)        
+                    time_of_day[user].append(getTime(message_time).hour)
                 else:
                     time_of_day[user] = [getTime(message_time).hour]
 
